@@ -29,8 +29,7 @@ def addWonder(id, api):
 		
 		query = ("INSERT INTO wonders (date_created, wonder_text, resolved, command_type, id) VALUES (\"" + dateCreated + "\", \"" + wonderText + "\", " + str(resolved) + ", " + commandType + ", " + str(id) + ")")
 		print("Tweet " + id + " added to database")
-		cursor.execute(query)
-
+		results = cursor.execute(query)
 		cnx.commit()
 
 		cursor.close()
@@ -42,7 +41,43 @@ def addWonder(id, api):
 
 def popWonder():
 	try:
-		cnx = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD
+		cnx = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
+							  host=MYSQL_HOST,
+							  database=MYSQL_DB, port=3306)
+		
+		cursor = cnx.cursor()
+		
+		query = ("SELECT id, wonder_text FROM " + str(MYSQL_DB) + ";")
+		cursor.execute(query)
+		rows = cursor.fetchall()
+		
+		if len(rows) == 0:
+		
+			cursor.close()
+			cnx.close()
+			
+			return 0
+
+		else:
+			chosenWonder = rows[random.randint(0, len(rows) - 1)]
+			
+			id = chosenWonder[0]
+			wonderString = chosenWonder[1].split("!give", 1)[-1].strip()
+			
+			command = ("DELETE FROM " + str(MYSQL_DB) + " WHERE id=" + str(id) + ";")
+			cursor.execute(command)
+			
+			cnx.commit()
+			
+			cursor.close()
+			cnx.close()
+			
+			return wonderString
+		
+	except:
+		print("Unable to pop wonder")
+		print(str(sys.exc_info()[0]) + str(sys.exc_info()[1]))
+		return ""
 	
 
 def addWonderToFile(wonderString):
@@ -74,7 +109,7 @@ def popWonderFromFile():
 
 	except:
 		print("Unable to pop a wonder from " + WONDER_FILE)
-		print(sys.exc_info())
+		print(str(sys.exc_info()[0]) + str(sys.exc_info()[1]))
 		return ""
 		
 def UpdateNew(api):
@@ -105,7 +140,7 @@ def ResolveTweet(id, api):
 		tweet = api.get_status(id)
 	except:
 		print("No tweet found with ID: " + str(id))
-		print(sys.exc_info()[0])
+		print(str(sys.exc_info()[0]) + str(sys.exc_info()[1]))
 		return
 	
 	
@@ -117,9 +152,9 @@ def ResolveTweet(id, api):
 			print(tweet._json['user']['screen_name'] + " is an asshole dumbass")
 			api.update_status("@" + tweet._json['user']['screen_name'] + " Don't try to confuse me :(", in_reply_to_status_id = tweet.id_str)
 			
-		elif "!give " in tweet.text:
-			wonder = tweet.text.split("!give ", 1)[-1].strip()
-			addWonder(wonder)
+		elif "!give" in tweet.text:
+			wonder = tweet.text.split("!give", 1)[-1].strip()
+			addWonder(tweet.id_str, api)
 			print("Wonder added:\t" + str(wonder))
 			api.update_status("@" + tweet._json['user']['screen_name'] + " Thank you! Your wonder is safe with me.", in_reply_to_status_id = tweet.id_str)
 			
@@ -128,6 +163,8 @@ def ResolveTweet(id, api):
 			if wonder == 0:
 				print("No wonders left to give!")
 				api.update_status("@" + tweet._json['user']['screen_name'] + " I'm sorry, I'm all out of wonders at the moment. :(", in_reply_to_status_id = tweet.id_str)
+			elif wonder == "":
+				print("Unable to pop wonder...")
 			else:
 				wonder = wonder.strip()
 				print("Wonder taken:\t" + str(wonder))
@@ -137,6 +174,7 @@ def ResolveTweet(id, api):
 		resolved = True
 	except:
 		print("Unable to resolve tweet")
+		print(str(sys.exc_info()[0]) + str(sys.exc_info()[1]))
 	
 	if resolved:
 		try:
@@ -145,3 +183,4 @@ def ResolveTweet(id, api):
 				f.write(str(id) + "\n")
 		except:
 			print("Unable to write to ids.txt")
+			print(str(sys.exc_info()[0]) + str(sys.exc_info()[1]))
