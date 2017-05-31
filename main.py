@@ -1,4 +1,4 @@
-import tweepy, time, json, mysql.connector
+import tweepy, time, json, mysql.connector, pprint
 from WonderBot import *
 from constants import *
 
@@ -22,10 +22,6 @@ try:
 except:
 	print("Unable to make API connection")
 	
-#Wondering Text Variables
-wondering = "WONDERING"
-wonderNum = 0
-
 
 print("Beginning wondering process...")
 running = True
